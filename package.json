@@ -1,0 +1,10 @@
+{
+  "name": "opengrading",
+  "version": "26.11.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node check.mjs",
+    "start": "python3 -m http.server 8080"
+  }
+}

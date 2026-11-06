@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenGrading — slab labels</title>
+<link rel="icon" href="data:,">
+<script>
+  try {
+    var saved = localStorage.getItem('opengrading.theme');
+    if (saved === 'dark' || (!saved && matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.dataset.theme = 'dark';
+    }
+  } catch (e) {}
+</script>
+<link rel="stylesheet" href="style.css?v=26.11">
+</head>
+<body>
+<header class="topbar no-print">
+  <strong>OpenGrading</strong>
+  <div class="spacer"></div>
+  <div class="zoomctl">
+    <input id="zoom" type="range" min="50" max="200" step="5" value="100" aria-label="Page zoom">
+    <output id="zoom-val" for="zoom">100%</output>
+  </div>
+  <button id="btn-export" class="ghost" type="button">Export</button>
+  <button id="btn-import" class="ghost" type="button">Import</button>
+  <input id="import-file" type="file" accept="application/json,.json" hidden>
+  <button id="btn-print" class="primary" type="button">Print</button>
+  <a class="ghost" href="https://github.com/sponsors/ImaginaryResources" target="_blank" rel="noopener"><span aria-hidden="true">♥</span> Donate</a>
+  <button id="btn-theme" class="iconbtn" type="button" title="Toggle dark mode" aria-label="Toggle dark mode" aria-pressed="false"></button>
+</header>
+
+<main class="app">
+  <aside class="panel no-print">
+    <section class="card">
+      <h2>Label</h2>
+      <div class="grid2">
+        <label class="field"><span>Name</span><input id="f-name" autocomplete="off"></label>
+        <label class="field"><span>Grade</span><input id="f-gradeValue" placeholder="10"></label>
+        <label class="field"><span>Set</span><input id="f-setLine" autocomplete="off"></label>
+        <label class="field"><span>Grade text</span><input id="f-gradeLabel" placeholder="GEM MINT"></label>
+        <label class="field"><span>Year</span><input id="f-year" autocomplete="off"></label>
+        <label class="field"><span>Card #</span><input id="f-cardNo" autocomplete="off"></label>
+        <label class="field"><span>Variation</span><input id="f-variation" autocomplete="off"></label>
+        <label class="field"><span>Cert #</span><input id="f-certNo" autocomplete="off"></label>
+      </div>
+      <label class="field"><span>Custom lines (one per line)</span><textarea id="f-lines" rows="3"></textarea></label>
+      <div class="grid2">
+        <label class="field"><span>Layout</span>
+          <select id="f-layout">
+            <option value="thumb">Photo left</option>
+            <option value="bleed">Photo background</option>
+            <option value="logo">Logo strip</option>
+          </select>
+        </label>
+        <label class="field"><span>Theme</span>
+          <select id="f-theme">
+            <option value="">Default</option>
+            <option value="neutral">Neutral</option>
+            <option value="psa">PSA</option>
+            <option value="bgs">BGS</option>
+            <option value="cgc">CGC</option>
+            <option value="sgc">SGC</option>
+          </select>
+        </label>
+      </div>
+      <div class="imgrow">
+        <img id="img-preview" class="preview" alt="" hidden>
+        <label class="filebtn">Photo<input id="f-image" type="file" accept="image/*" hidden></label>
+        <select id="f-fit" title="Photo fit">
+          <option value="cover">Cover</option>
+          <option value="contain">Contain</option>
+        </select>
+        <button id="btn-img-clear" class="ghost small" type="button">Clear</button>
+      </div>
+      <div class="imgrow">
+        <img id="bg-preview" class="preview" alt="" hidden>
+        <label class="filebtn">Background<input id="f-bgImage" type="file" accept="image/*" hidden></label>
+        <select id="f-bgFit" title="Background fit">
+          <option value="cover">Cover</option>
+          <option value="contain">Contain</option>
+        </select>
+        <button id="btn-bg-clear" class="ghost small" type="button">Clear</button>
+      </div>
+      <div class="btnrow">
+        <button id="btn-new" type="button">New</button>
+        <button id="btn-dup" type="button">Duplicate</button>
+        <button id="btn-del" class="danger" type="button">Delete</button>
+        <button class="undo-btn" type="button" disabled>Undo</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Appearance</h2>
+      <div class="grid2">
+        <label class="field"><span>Default theme</span>
+          <select id="s-theme">
+            <option value="neutral">Neutral</option>
+            <option value="psa">PSA</option>
+            <option value="bgs">BGS</option>
+            <option value="cgc">CGC</option>
+            <option value="sgc">SGC</option>
+          </select>
+        </label>
+      </div>
+      <div class="accentrow">
+        <label class="field"><span>Accent</span><input id="s-accent" type="color" value="#c8102e"></label>
+        <button id="s-accent-reset" class="ghost small" type="button">Theme default</button>
+      </div>
+    </section>
+
+  </aside>
+
+  <div class="stage">
+    <div id="sheets" class="sheets"></div>
+  </div>
+
+  <aside class="panel right no-print">
+    <details class="card" open>
+      <summary><h2>Sheet &amp; print</h2></summary>
+      <div class="grid2">
+        <label class="field"><span>Paper</span>
+          <select id="s-paper">
+            <option value="a4">A4 (210 × 297 mm)</option>
+            <option value="letter">Letter (8.5 × 11 in)</option>
+            <option value="custom">Custom</option>
+          </select>
+        </label>
+        <label class="field"><span>Label width (in)</span><input id="s-labelW" type="number" step="0.01" min="0.5" max="9"></label>
+        <label class="field"><span>Label height (in)</span><input id="s-labelH" type="number" step="0.01" min="0.3" max="6"></label>
+        <label class="field"><span>Page margin (in)</span><input id="s-margin" type="number" step="0.05" min="0" max="3"></label>
+        <label class="field"><span>Top margin (in)</span><input id="s-marginTop" type="number" step="0.05" min="0" max="3"></label>
+        <label class="field"><span>Gap between labels (in)</span><input id="s-gap" type="number" step="0.02" min="0" max="1"></label>
+        <label class="field custom-page" hidden><span>Page width (in)</span><input id="s-pageW" type="number" step="0.01" min="3" max="20"></label>
+        <label class="field custom-page" hidden><span>Page height (in)</span><input id="s-pageH" type="number" step="0.01" min="3" max="20"></label>
+        <label class="field"><span>Offset X (in)</span><input id="s-offsetX" type="number" step="0.02" min="-2" max="2"></label>
+        <label class="field"><span>Offset Y (in)</span><input id="s-offsetY" type="number" step="0.02" min="-2" max="2"></label>
+      </div>
+      <label class="check"><input id="s-cutlines" type="checkbox"> Cut guides</label>
+      <label class="check"><input id="s-calib" type="checkbox"> 1-inch calibration page</label>
+      <p class="hint" id="sheet-hint"></p>
+    </details>
+
+    <section class="card">
+      <h2>Labels <span id="count" class="muted"></span></h2>
+      <ul id="label-list" class="label-list"></ul>
+      <div class="btnrow">
+        <button id="btn-clear" class="danger small" type="button">Delete all</button>
+        <button id="btn-undo" class="undo-btn" type="button" disabled>Undo</button>
+      </div>
+    </section>
+  </aside>
+</main>
+
+<div id="status" class="status no-print" role="status"></div>
+<script type="module" src="app.js?v=26.11"></script>
+</body>
+</html>
