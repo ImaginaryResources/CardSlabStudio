@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
 import {
   DEFAULT_SETTINGS,
+  THEMES,
   pageSize,
   gridFor,
   paginate,
   cleanImport,
+  toneFor,
+  code39Bars,
 } from './lib.js';
 
 const settings = (over) => ({ ...DEFAULT_SETTINGS, ...over });
@@ -74,6 +77,8 @@ const clamped = cleanImport({
 assert.equal(clamped.settings.labelW, 9);
 assert.equal(clamped.settings.margin, DEFAULT_SETTINGS.margin);
 assert.equal(clamped.settings.cutlines, false);
+assert.equal(clamped.settings.border, 1, 'border default');
+assert.equal(cleanImport({ settings: { border: 99 }, labels: [{ name: 'x' }] }).settings.border, 6, 'border clamped');
 assert.ok(!('drop' in clamped.settings));
 
 // Import: unsafe fields dropped or sanitised
@@ -115,5 +120,28 @@ assert.equal(
   cleanImport({ labels: [{ bgImage: 'javascript:x' }] }).labels[0].bgImage,
   null
 );
+
+// Import: logo slot and BGS colour override
+const logo = 'data:image/png;base64,CCCC';
+const themed = cleanImport({
+  labels: [{ logoImage: logo, bgsTone: 'gold' }, { logoImage: 'javascript:x', bgsTone: 'evil' }],
+});
+assert.equal(themed.labels[0].logoImage, logo);
+assert.equal(themed.labels[0].bgsTone, 'gold');
+assert.equal(themed.labels[1].logoImage, null);
+assert.equal(themed.labels[1].bgsTone, '');
+assert.ok(THEMES.includes('tag'), 'TAG theme present');
+
+// BGS tone: override wins, otherwise grade tier
+assert.equal(toneFor({ bgsTone: 'silver', gradeValue: '10' }), 'silver');
+assert.equal(toneFor({ bgsTone: '', gradeValue: '10' }), 'black');
+assert.equal(toneFor({ bgsTone: '', gradeValue: '9.5' }), 'gold');
+assert.equal(toneFor({ bgsTone: '', gradeValue: '9' }), 'silver');
+assert.equal(toneFor({ bgsTone: '', gradeValue: '' }), 'silver');
+
+// Code 39: quiet empty input, bars for serials
+assert.deepEqual(code39Bars(''), []);
+assert.ok(code39Bars('PSA 123').length > 0);
+assert.ok(code39Bars('abc-123').length > 0);
 
 console.log('check.mjs: all assertions passed');

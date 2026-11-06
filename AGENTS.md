@@ -20,7 +20,7 @@ Serve over HTTP; opening `index.html` via `file://` breaks ES modules.
 
 ## Gotchas
 
-- Cache busting: `index.html` and `app.js` import `?v=26.11`. Bump all three occurrences when changing `app.js`, `lib.js`, or `style.css`, or users may get stale code.
+- Cache busting: `index.html` and `app.js` import `?v=26.11`. Version is `YY.MM` (year.month, e.g. `26.11` = Nov 2026); on any change to `app.js`, `lib.js`, or `style.css`, bump all three occurrences to the current year.month and keep `package.json` in sync, or users may get stale code.
 - Add a label field in `lib.js` (`newLabel`, `LABEL_TEXT`, `cleanImport` sanitizing), then wire `#f-<name>` in `index.html` / `app.js`.
 - Numeric limits are duplicated in `lib.js` (`NUMBER_LIMITS`), `index.html` (`min`/`max`), and `bindNumber` calls. Change all three.
 - `cleanImport` is the trust boundary for both storage load and JSON import. New data must be validated/clamped there; never insert user content with `innerHTML`.

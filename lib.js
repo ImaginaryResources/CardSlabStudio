@@ -4,7 +4,8 @@ export const PAPERS = {
 };
 
 export const LAYOUTS = ['thumb', 'bleed', 'logo'];
-export const THEMES = ['neutral', 'psa', 'bgs', 'cgc', 'sgc'];
+export const THEMES = ['neutral', 'psa', 'bgs', 'cgc', 'sgc', 'tag'];
+export const BGS_TONES = ['', 'black', 'gold', 'silver'];
 
 export const DEFAULT_SETTINGS = {
   paper: 'a4',
@@ -19,6 +20,7 @@ export const DEFAULT_SETTINGS = {
   offsetY: 0,
   theme: 'neutral',
   accent: '',
+  border: 1,
   cutlines: true,
   calib: false,
 };
@@ -44,6 +46,7 @@ const NUMBER_LIMITS = {
   labelH: [0.3, 6],
   offsetX: [-2, 2],
   offsetY: [-2, 2],
+  border: [0, 6],
 };
 
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
@@ -72,9 +75,53 @@ export function newLabel() {
     fit: 'cover',
     bgImage: null,
     bgFit: 'cover',
+    logoImage: null,
+    bgsTone: '',
     layout: 'thumb',
     theme: '',
   };
+}
+
+/** Resolve BGS label colour: explicit override wins, otherwise grade tier. */
+// shortcut: 10 always reads black; real Black Label needs four 10 subgrades, override covers that.
+export function toneFor(label) {
+  if (BGS_TONES.includes(label.bgsTone) && label.bgsTone) return label.bgsTone;
+  const grade = parseFloat(label.gradeValue);
+  if (!Number.isFinite(grade)) return 'silver';
+  if (grade >= 10) return 'black';
+  if (grade >= 9.5) return 'gold';
+  return 'silver';
+}
+
+// Code 39: 9 modules per character, wide = 3, narrow = 1. Bars at even indexes.
+const CODE39 = {
+  '0': '000110100', '1': '100100001', '2': '001100001', '3': '101100000',
+  '4': '000110001', '5': '100110000', '6': '001110000', '7': '000100101',
+  '8': '100100100', '9': '001100100', A: '100001001', B: '001001001',
+  C: '101001000', D: '000011001', E: '100011000', F: '001011000',
+  G: '000001101', H: '100001100', I: '001001100', J: '000011100',
+  K: '100000011', L: '001000011', M: '101000010', N: '000010011',
+  O: '100010010', P: '001010010', Q: '000000111', R: '100000110',
+  S: '001000110', T: '000010110', U: '110000001', V: '011000001',
+  W: '111000000', X: '010010001', Y: '110010000', Z: '011010000',
+  '-': '010000101', '.': '110000100', ' ': '011000100', '$': '010101000',
+  '/': '010100010', '+': '010001010', '%': '000101010', '*': '010010100',
+};
+
+/** Code 39 bars for the values the label already stores (cert or card number). */
+export function code39Bars(value) {
+  const text = String(value || '').toUpperCase().replace(/[^0-9A-Z\-. $/+%]/g, '');
+  if (!text) return [];
+  const bars = [];
+  for (const ch of `*${text}*`) {
+    const pattern = CODE39[ch];
+    if (!pattern) continue;
+    for (let i = 0; i < 9; i += 1) {
+      bars.push({ w: pattern[i] === '1' ? 3 : 1, on: i % 2 === 0 });
+    }
+    bars.push({ w: 1, on: false });
+  }
+  return bars;
 }
 
 export function pageSize(settings) {
@@ -177,6 +224,10 @@ export function cleanImport(raw) {
       label.bgImage = src.bgImage;
     }
     if (src.bgFit === 'contain' || src.bgFit === 'cover') label.bgFit = src.bgFit;
+    if (typeof src.logoImage === 'string' && IMAGE_RE.test(src.logoImage)) {
+      label.logoImage = src.logoImage;
+    }
+    if (BGS_TONES.includes(src.bgsTone)) label.bgsTone = src.bgsTone;
     if (LAYOUTS.includes(src.layout)) label.layout = src.layout;
     if (THEMES.includes(src.theme)) label.theme = src.theme;
     if (typeof src.id === 'string' && src.id && !seen.has(src.id)) {

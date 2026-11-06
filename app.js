@@ -5,6 +5,8 @@ import {
   LABEL_TEXT,
   uid,
   newLabel,
+  toneFor,
+  code39Bars,
   pageSize,
   gridFor,
   paginate,
@@ -143,12 +145,20 @@ function renderSettings() {
   $('#s-pageH').value = s.pageH;
   $('#s-offsetX').value = s.offsetX;
   $('#s-offsetY').value = s.offsetY;
+  $('#s-border').value = s.border;
   $('#s-cutlines').checked = s.cutlines;
   $('#s-calib').checked = s.calib;
   $('#s-accent').value = s.accent || '#c8102e';
   document.querySelectorAll('.custom-page').forEach((node) => {
     node.hidden = s.paper !== 'custom';
   });
+}
+
+function resetThemeDefaults() {
+  state.settings.accent = '';
+  state.settings.border = DEFAULT_SETTINGS.border;
+  $('#s-accent').value = '#c8102e';
+  $('#s-border').value = DEFAULT_SETTINGS.border;
 }
 
 function renderForm() {
@@ -159,6 +169,8 @@ function renderForm() {
   $('#f-lines').value = label ? label.customLines.join('\n') : '';
   $('#f-layout').value = label ? label.layout : 'thumb';
   $('#f-theme').value = label ? label.theme : '';
+  $('#f-bgsTone').value = label ? label.bgsTone : '';
+  $('#tone-field').hidden = (label ? label.theme || state.settings.theme : state.settings.theme) !== 'bgs';
   $('#f-fit').value = label ? label.fit : 'cover';
   $('#f-bgFit').value = label ? label.bgFit : 'cover';
   const preview = $('#img-preview');
@@ -176,6 +188,14 @@ function renderForm() {
   } else {
     bgPreview.removeAttribute('src');
     bgPreview.hidden = true;
+  }
+  const logoPreview = $('#logo-preview');
+  if (label && label.logoImage) {
+    logoPreview.src = label.logoImage;
+    logoPreview.hidden = false;
+  } else {
+    logoPreview.removeAttribute('src');
+    logoPreview.hidden = true;
   }
 }
 
@@ -206,11 +226,203 @@ function imgEl(src, fit, extraClass) {
   return wrap;
 }
 
+function barcodeEl(value) {
+  const wrap = el('div', 'lb-barcode');
+  const bars = code39Bars(value);
+  if (!bars.length) {
+    wrap.hidden = true;
+    return wrap;
+  }
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  const total = bars.reduce((sum, bar) => sum + bar.w, 0) + 20;
+  svg.setAttribute('viewBox', `0 0 ${total} 1`);
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.setAttribute('aria-hidden', 'true');
+  let x = 10;
+  for (const bar of bars) {
+    if (bar.on) {
+      const rect = document.createElementNS(ns, 'rect');
+      rect.setAttribute('x', x);
+      rect.setAttribute('y', 0);
+      rect.setAttribute('width', bar.w);
+      rect.setAttribute('height', 1);
+      rect.setAttribute('fill', 'currentColor');
+      svg.append(rect);
+    }
+    x += bar.w;
+  }
+  wrap.append(svg);
+  return wrap;
+}
+
+// Decorative QR silhouette: deterministic from serial, not a scannable QR.
+function qrEl(value) {
+  const box = el('div', 'lb-qr');
+  if (!value) {
+    box.hidden = true;
+    return box;
+  }
+  const n = 21;
+  let seed = 2166136261;
+  for (const ch of value) seed = Math.imul(seed ^ ch.charCodeAt(0), 16777619);
+  const rand = () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const finder = (x, y) => {
+    const fx = x < 7 ? 0 : x >= n - 7 ? n - 7 : -1;
+    const fy = y < 7 ? 0 : y >= n - 7 ? n - 7 : -1;
+    if (!((fx === 0 && fy === 0) || (fx === n - 7 && fy === 0) || (fx === 0 && fy === n - 7))) {
+      return null;
+    }
+    const dx = x - fx;
+    const dy = y - fy;
+    return dx === 0 || dx === 6 || dy === 0 || dy === 6 || (dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4);
+  };
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${n} ${n}`);
+  svg.setAttribute('shape-rendering', 'crispEdges');
+  svg.setAttribute('aria-hidden', 'true');
+  for (let y = 0; y < n; y += 1) {
+    for (let x = 0; x < n; x += 1) {
+      const f = finder(x, y);
+      const on = f !== null ? f : x === 6 || y === 6 ? (x + y) % 2 === 0 : rand() > 0.5;
+      if (!on) continue;
+      const rect = document.createElementNS(ns, 'rect');
+      rect.setAttribute('x', x);
+      rect.setAttribute('y', y);
+      rect.setAttribute('width', 1);
+      rect.setAttribute('height', 1);
+      rect.setAttribute('fill', 'currentColor');
+      svg.append(rect);
+    }
+  }
+  box.append(svg);
+  return box;
+}
+
+function logoEl(label, text, extra = '') {
+  const box = el('div', `lb-logo ${extra}`.trim());
+  if (label.logoImage) {
+    const img = document.createElement('img');
+    img.src = label.logoImage;
+    img.alt = '';
+    box.append(img);
+  } else {
+    box.append(el('span', 'lb-logo-text', text));
+  }
+  return box;
+}
+
+function cgcHeader(label) {
+  const head = el('div', 'lb-header');
+  const brand = el('div', 'lb-brand');
+  brand.append(logoEl(label, 'CGC', 'lb-logo-head'));
+  brand.append(el('span', 'lb-brand-text', 'UNIVERSAL GRADE'));
+  head.append(brand);
+  head.append(el('span', 'lb-header-text', 'CGC CARDS'));
+  return head;
+}
+
+function gradeEl(label, theme) {
+  const cardNo = String(label.cardNo || '').replace(/^#/, '');
+  if (!label.gradeValue && !label.gradeLabel && !(theme === 'psa' && cardNo) && !(theme === 'bgs' && label.certNo)) {
+    return null;
+  }
+  const grade = el('div', 'lb-grade');
+  if (theme === 'psa') {
+    if (cardNo) grade.append(el('div', 'gl-card', `#${cardNo}`));
+    if (label.gradeLabel) grade.append(el('div', 'gl', label.gradeLabel));
+    if (label.gradeValue) grade.append(el('div', 'gv', label.gradeValue));
+  } else if (theme === 'cgc') {
+    if (label.gradeLabel) grade.append(el('div', 'gl', label.gradeLabel));
+    if (label.gradeValue) grade.append(el('div', 'gv', label.gradeValue));
+  } else {
+    if (label.gradeValue) grade.append(el('div', 'gv', label.gradeValue));
+    if (label.gradeLabel) grade.append(el('div', 'gl', label.gradeLabel));
+  }
+  if (theme === 'bgs' && label.certNo) grade.append(el('div', 'lb-serial', label.certNo));
+  return grade;
+}
+
+function fillMain(main, label, theme) {
+  const cardNo = String(label.cardNo || '').replace(/^#/, '');
+  const meta = [label.year, label.setLine].filter(Boolean).join(' ');
+  const add = (cls, text) => {
+    if (text) main.append(el('div', cls, text));
+  };
+  if (theme === 'psa') {
+    add('lb-sub', meta);
+    add('lb-name', [label.name, label.variation].filter(Boolean).join(' - '));
+    for (const line of label.customLines) add('lb-line', line);
+  } else if (theme === 'bgs') {
+    add('lb-sub', meta);
+    add('lb-line', label.customLines[0]);
+    add('lb-line', label.variation);
+    add('lb-name', [cardNo ? `#${cardNo}` : '', label.name].filter(Boolean).join(' '));
+    for (const line of label.customLines.slice(1)) add('lb-line', line);
+  } else if (theme === 'cgc') {
+    add('lb-name', label.name);
+    add('lb-sub', [label.setLine, label.year ? `(${label.year})` : ''].filter(Boolean).join(' '));
+    add('lb-line', label.variation);
+    for (const line of label.customLines) add('lb-line', line);
+    if (!label.customLines.length && cardNo) add('lb-line', `#${cardNo}`);
+  } else if (theme === 'tag') {
+    add('lb-name', label.name);
+    add('lb-sub', meta);
+    add('lb-line', label.variation);
+    for (const line of label.customLines) add('lb-line', line);
+  } else {
+    add('lb-name', label.name);
+    add('lb-sub', meta);
+    add('lb-line', label.variation);
+    for (const line of label.customLines) add('lb-line', line);
+    const foot = [
+      cardNo ? `#${cardNo}` : '',
+      label.certNo ? `Cert ${label.certNo}` : '',
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    add('lb-foot', foot);
+  }
+}
+
+function codeFooter(label) {
+  const value = String(label.certNo || label.cardNo || '').replace(/^#/, '').trim();
+  if (!value) return null;
+  const foot = el('div', 'lb-codes');
+  foot.append(barcodeEl(value));
+  foot.append(el('div', 'lb-code-val', label.certNo || value));
+  return foot;
+}
+
+function tagSide(label) {
+  const serial = String(label.certNo || label.cardNo || '').replace(/^#/, '').trim();
+  const grade = gradeEl(label, 'tag');
+  if (!grade && !serial) return null;
+  const side = el('div', 'lb-side');
+  if (grade) side.append(grade);
+  if (serial) {
+    const row = el('div', 'lb-qrrow');
+    row.append(qrEl(serial));
+    row.append(el('div', 'lb-qr-serial', serial));
+    side.append(row);
+  }
+  return side;
+}
+
 function labelEl(label, settings) {
   const layout = LAYOUTS.includes(label.layout) ? label.layout : 'thumb';
+  const theme = label.theme || settings.theme;
   const root = el('div', 'label ' + layout);
-  root.dataset.theme = label.theme || settings.theme;
+  root.dataset.theme = theme;
+  if (theme === 'bgs') root.dataset.tone = toneFor(label);
   if (settings.accent) root.style.setProperty('--l-accent', settings.accent);
+  root.style.setProperty('--l-border-w', settings.border + 'px');
   if (label.id === state.selectedId) root.classList.add('selected');
   root.addEventListener('click', () => select(label.id));
 
@@ -229,36 +441,32 @@ function labelEl(label, settings) {
   if (layout === 'bleed' && label.image && !label.bgImage) {
     root.append(imgEl(label.image, 'cover', 'lb-bleed-img'));
   }
+  if (theme === 'cgc') root.append(cgcHeader(label));
 
   const row = el('div', 'lb-row');
+  if (theme === 'bgs') row.append(logoEl(label, 'BGS'));
   if (label.image && (layout === 'thumb' || (layout === 'bleed' && label.bgImage))) {
     row.append(imgEl(label.image, label.fit));
   }
 
   const main = el('div', 'lb-main');
-  if (label.name) main.append(el('div', 'lb-name', label.name));
-  const meta = [label.year, label.setLine].filter(Boolean).join(' ');
-  if (meta) main.append(el('div', 'lb-sub', meta));
-  if (label.variation) main.append(el('div', 'lb-line', label.variation));
-  for (const line of label.customLines) main.append(el('div', 'lb-line', line));
-  const cardNo = String(label.cardNo || '').replace(/^#/, '');
-  const foot = [
-    cardNo ? `#${cardNo}` : '',
-    label.certNo ? `Cert ${label.certNo}` : '',
-  ]
-    .filter(Boolean)
-    .join(' · ');
-  if (foot) main.append(el('div', 'lb-foot', foot));
+  if (theme === 'tag') main.classList.add('lb-frame');
+  fillMain(main, label, theme);
   row.append(main);
 
-  if (label.gradeValue || label.gradeLabel) {
-    const grade = el('div', 'lb-grade');
-    if (label.gradeValue) grade.append(el('div', 'gv', label.gradeValue));
-    if (label.gradeLabel) grade.append(el('div', 'gl', label.gradeLabel));
-    row.append(grade);
+  if (theme === 'tag') {
+    const side = tagSide(label);
+    if (side) row.append(side);
+  } else {
+    const grade = gradeEl(label, theme);
+    if (grade) row.append(grade);
   }
 
   body.append(row);
+  if (theme === 'psa' || theme === 'cgc') {
+    const foot = codeFooter(label);
+    if (foot) body.append(foot);
+  }
   root.append(body);
   return root;
 }
@@ -382,7 +590,7 @@ function loadImage(src) {
   });
 }
 
-async function shrink(file) {
+async function shrink(file, keepAlpha = false) {
   const url = URL.createObjectURL(file);
   try {
     const img = await loadImage(url);
@@ -392,10 +600,12 @@ async function shrink(file) {
     canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
     canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (!keepAlpha) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/jpeg', 0.82);
+    return keepAlpha ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.82);
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -475,6 +685,15 @@ function bind() {
     const label = sel();
     if (!label) return;
     label.theme = event.target.value;
+    resetThemeDefaults();
+    commit();
+    renderForm();
+  });
+
+  $('#f-bgsTone').addEventListener('change', (event) => {
+    const label = sel();
+    if (!label) return;
+    label.bgsTone = event.target.value;
     commit();
   });
 
@@ -526,6 +745,32 @@ function bind() {
     if (!label) return;
     label.bgFit = event.target.value;
     commit();
+  });
+
+  $('#f-logoImage').addEventListener('change', async (event) => {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = '';
+    const label = sel();
+    if (!label || !file) return;
+    if (!file.type.startsWith('image/')) {
+      toast('Choose an image file.', true);
+      return;
+    }
+    try {
+      label.logoImage = await shrink(file, true);
+      commit();
+      renderForm();
+    } catch {
+      toast('Could not read that image.', true);
+    }
+  });
+
+  $('#btn-logo-clear').addEventListener('click', () => {
+    const label = sel();
+    if (!label) return;
+    label.logoImage = null;
+    commit();
+    renderForm();
   });
 
   $('#btn-bg-clear').addEventListener('click', () => {
@@ -590,10 +835,12 @@ function bind() {
   });
 
   const zoom = $('#zoom');
-  zoom.addEventListener('input', () => {
+  const applyZoom = () => {
     document.documentElement.style.setProperty('--zoom', Number(zoom.value) / 100);
     $('#zoom-val').textContent = zoom.value + '%';
-  });
+  };
+  zoom.addEventListener('input', applyZoom);
+  applyZoom();
 
   $('#s-paper').addEventListener('change', (event) => {
     state.settings.paper = event.target.value;
@@ -606,7 +853,9 @@ function bind() {
 
   $('#s-theme').addEventListener('change', (event) => {
     state.settings.theme = event.target.value;
+    resetThemeDefaults();
     commit();
+    renderForm();
   });
 
   $('#s-cutlines').addEventListener('change', (event) => {
@@ -625,8 +874,7 @@ function bind() {
   });
 
   $('#s-accent-reset').addEventListener('click', () => {
-    state.settings.accent = '';
-    $('#s-accent').value = '#c8102e';
+    resetThemeDefaults();
     commit();
   });
 
@@ -639,6 +887,7 @@ function bind() {
   bindNumber('#s-pageH', 'pageH', 3, 20);
   bindNumber('#s-offsetX', 'offsetX', -2, 2);
   bindNumber('#s-offsetY', 'offsetY', -2, 2);
+  bindNumber('#s-border', 'border', 0, 6);
 
   $('#btn-print').addEventListener('click', () => {
     saveNow();
