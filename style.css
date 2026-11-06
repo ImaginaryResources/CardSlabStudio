@@ -22,6 +22,30 @@
     U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
+/* Roboto (SIL OFL, see fonts/OFL-roboto.txt). */
+@font-face {
+  font-family: Roboto;
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 100%;
+  font-display: block;
+  src: url("fonts/roboto-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: Roboto;
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 100%;
+  font-display: block;
+  src: url("fonts/roboto-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 :root {
   --ink: #111827;
   --muted: #6b7280;
@@ -211,30 +235,57 @@ button.small { padding: 4px 8px; font-size: 12px; }
 }
 
 .imgrow {
-  display: flex;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "preview file clear"
+    "preview ctl ctl";
   align-items: center;
-  gap: 8px;
-  margin: 8px 0;
+  gap: 5px 8px;
+  padding: 8px 0;
 }
+.imgrow + .imgrow { border-top: 1px solid var(--line); }
 .preview {
+  grid-area: preview;
   width: 44px;
-  height: 34px;
+  height: 44px;
   object-fit: contain;
-  border: 1px solid var(--line);
+  border: 1px dashed var(--line);
   border-radius: 6px;
   background: var(--surface-2);
 }
+.imgrow .preview[hidden] { display: block; visibility: hidden; }
 .filebtn {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 12px;
+  grid-area: file;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+  border: 1px dashed var(--line);
+  border-radius: 7px;
+  padding: 5px 8px;
   cursor: pointer;
-  background: var(--surface);
+  background: transparent;
 }
-.filebtn:hover { background: var(--surface-3); }
+.filebtn-main {
+  font-size: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.filebtn-hint {
+  font-size: 10.5px;
+  color: var(--muted);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.filebtn:hover { border-color: #c7ccd4; background: var(--surface-2); }
+.slotctl { grid-area: ctl; display: flex; gap: 6px; min-width: 0; }
+.slotctl select { flex: 1 1 0; min-width: 0; }
 .imgrow select {
-  width: 80px;
+  width: auto;
   padding: 5px 6px;
   font-size: 12px;
   border: 1px solid var(--line);
@@ -242,6 +293,16 @@ button.small { padding: 4px 8px; font-size: 12px; }
   background: var(--surface-2);
   color: var(--ink);
 }
+.imgrow button.small {
+  grid-area: clear;
+  align-self: start;
+  padding: 4px 6px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+.imgrow button.small:hover { color: var(--ink); background: var(--surface-2); }
+#tone-field { margin-top: 8px; }
 
 .btnrow { display: flex; gap: 8px; margin-top: 10px; }
 
@@ -370,6 +431,7 @@ button.small { padding: 4px 8px; font-size: 12px; }
   border: var(--l-border-w, 1px) solid var(--l-border, #111);
   border-radius: 2px;
   font-family: var(--l-font, Arial, Helvetica, sans-serif);
+  --l-fh: calc(var(--label-h, 80.64px) * var(--l-scale, 1));
   line-height: 1.1;
   letter-spacing: 0.01em;
   -webkit-print-color-adjust: exact;
@@ -420,7 +482,7 @@ button.small { padding: 4px 8px; font-size: 12px; }
 
 .lb-name {
   font-size: 10px;
-  font-size: calc(var(--label-h, 80.64px) * 0.126);
+  font-size: calc(var(--l-fh, 80.64px) * 0.126);
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
@@ -430,18 +492,18 @@ button.small { padding: 4px 8px; font-size: 12px; }
 .lb-line,
 .lb-foot {
   font-size: 7.2px;
-  font-size: calc(var(--label-h, 80.64px) * 0.09);
+  font-size: calc(var(--l-fh, 80.64px) * 0.09);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .lb-sub { color: var(--l-muted, #555); }
-.lb-line { font-size: 7px; font-size: calc(var(--label-h, 80.64px) * 0.086); }
+.lb-line { font-size: 7px; font-size: calc(var(--l-fh, 80.64px) * 0.086); }
 .lb-foot {
   margin-top: auto;
   padding-top: calc(var(--label-h, 80.64px) * 0.015);
   font-size: 6.6px;
-  font-size: calc(var(--label-h, 80.64px) * 0.082);
+  font-size: calc(var(--l-fh, 80.64px) * 0.082);
   color: var(--l-muted, #555);
 }
 
@@ -461,7 +523,7 @@ button.small { padding: 4px 8px; font-size: 12px; }
 .gv {
   font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
   font-size: 18px;
-  font-size: calc(var(--label-h, 80.64px) * 0.23);
+  font-size: calc(var(--l-fh, 80.64px) * 0.23);
   font-weight: 800;
   line-height: 0.95;
   color: var(--l-accent, #111);
@@ -475,7 +537,7 @@ button.small { padding: 4px 8px; font-size: 12px; }
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 5.4px;
-  font-size: calc(var(--label-h, 80.64px) * 0.066);
+  font-size: calc(var(--l-fh, 80.64px) * 0.066);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -542,7 +604,8 @@ button.small { padding: 4px 8px; font-size: 12px; }
   --l-muted: #5b6470;
   --l-accent: #c8102e;
   --l-border: #c8102e;
-  --l-font: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --l-font: Roboto, "Helvetica Neue", Arial, sans-serif;
+  overflow: visible; /* PSA logo box paints over the bottom border */
 }
 .label[data-theme="bgs"] {
   --l-bg: #f5f6f7;
@@ -611,12 +674,12 @@ button.small { padding: 4px 8px; font-size: 12px; }
 }
 .lb-logo img {
   display: block;
-  max-width: 100%;
-  max-height: 100%;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
 .lb-logo-text {
-  font-size: calc(var(--label-h, 80.64px) * 0.11);
+  font-size: calc(var(--l-fh, 80.64px) * 0.11);
   font-weight: 800;
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -642,33 +705,68 @@ button.small { padding: 4px 8px; font-size: 12px; }
 .lb-code-val {
   margin-left: auto;
   overflow: hidden;
-  font-size: calc(var(--label-h, 80.64px) * 0.07);
+  font-size: calc(var(--l-fh, 80.64px) * 0.07);
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.label[data-theme="psa"] .lb-grade {
-  align-items: flex-end;
-  justify-content: center;
+/* PSA: two space-evenly columns, 4th left line is the barcode strip.
+   Percentages tuned for 2.72x0.84in label, border 6, Roboto 400. */
+.label[data-theme="psa"] .lb-main {
+  flex: 0 0 60%;
+  max-width: 60%;
+  justify-content: space-evenly;
+  gap: 0;
 }
-.label[data-theme="psa"] .gl-card {
-  max-width: 100%;
-  overflow: hidden;
-  color: var(--l-text, #111);
-  font-size: calc(var(--label-h, 80.64px) * 0.075);
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .label[data-theme="psa"] .lb-name,
 .label[data-theme="psa"] .lb-sub,
 .label[data-theme="psa"] .lb-line,
-.label[data-theme="psa"] .lb-foot,
-.label[data-theme="psa"] .gl-card {
+.label[data-theme="psa"] .gl-card,
+.label[data-theme="psa"] .gl,
+.label[data-theme="psa"] .gv,
+.label[data-theme="psa"] .lb-serial {
+  font-family: inherit;
+  font-size: calc(var(--l-fh, 80.64px) * 0.148);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--l-text, #111);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+}
+.label[data-theme="psa"] .lb-grade {
+  flex: 0 0 30%;
+  max-width: 30%;
+  margin-left: auto;
+  align-items: flex-end;
+  justify-content: space-evenly;
+  gap: 0;
+  padding-left: 0;
+  border-left: 0;
+  text-align: right;
+}
+.label[data-theme="psa"] .lb-codes {
+  height: calc(var(--l-fh, 80.64px) * 0.148);
+  margin-top: 0;
+}
+/* Bars end under the "H" of "YELLOW CHEEKS" (prefilled example): 0.746 x label-h. */
+.label[data-theme="psa"] .lb-barcode {
+  flex: 0 0 calc(var(--l-fh, 80.64px) * 0.8);
+}
+/* PSA logo box: bottom-centre block, sized from the text, covers the bottom border. */
+.lb-logo-box {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+}
+.lb-logo-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .label[data-theme="bgs"] .lb-main {
@@ -676,11 +774,11 @@ button.small { padding: 4px 8px; font-size: 12px; }
 }
 .label[data-theme="bgs"] .lb-sub,
 .label[data-theme="bgs"] .lb-line {
-  font-size: calc(var(--label-h, 80.64px) * 0.072);
+  font-size: calc(var(--l-fh, 80.64px) * 0.072);
   line-height: 1.08;
 }
 .label[data-theme="bgs"] .lb-name {
-  font-size: calc(var(--label-h, 80.64px) * 0.086);
+  font-size: calc(var(--l-fh, 80.64px) * 0.086);
   line-height: 1.08;
 }
 .label[data-theme="bgs"] .lb-logo {
@@ -696,7 +794,7 @@ button.small { padding: 4px 8px; font-size: 12px; }
   overflow: hidden;
   max-width: 100%;
   color: var(--l-muted, #667085);
-  font-size: calc(var(--label-h, 80.64px) * 0.06);
+  font-size: calc(var(--l-fh, 80.64px) * 0.06);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -731,12 +829,12 @@ button.small { padding: 4px 8px; font-size: 12px; }
   max-height: 100%;
 }
 .label[data-theme="cgc"] .lb-logo-head .lb-logo-text {
-  font-size: calc(var(--label-h, 80.64px) * 0.1);
+  font-size: calc(var(--l-fh, 80.64px) * 0.1);
 }
 .label[data-theme="cgc"] .lb-brand-text,
 .label[data-theme="cgc"] .lb-header-text {
   overflow: hidden;
-  font-size: calc(var(--label-h, 80.64px) * 0.055);
+  font-size: calc(var(--l-fh, 80.64px) * 0.055);
   font-weight: 700;
   letter-spacing: 0.1em;
   text-overflow: ellipsis;
@@ -794,7 +892,7 @@ button.small { padding: 4px 8px; font-size: 12px; }
   overflow: hidden;
   max-width: 55%;
   color: var(--l-muted, #5b6470);
-  font-size: calc(var(--label-h, 80.64px) * 0.052);
+  font-size: calc(var(--l-fh, 80.64px) * 0.052);
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;

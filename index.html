@@ -13,7 +13,7 @@
     }
   } catch (e) {}
 </script>
-<link rel="stylesheet" href="style.css?v=26.11">
+<link rel="stylesheet" href="style.css?v=26.11.14">
 </head>
 <body>
 <header class="topbar no-print">
@@ -46,63 +46,60 @@
         <label class="field"><span>Cert #</span><input id="f-certNo" autocomplete="off"></label>
       </div>
       <label class="field"><span>Custom lines (one per line)</span><textarea id="f-lines" rows="3"></textarea></label>
-      <div class="grid2">
-        <label class="field"><span>Layout</span>
-          <select id="f-layout">
-            <option value="thumb">Photo left</option>
-            <option value="bleed">Photo background</option>
-            <option value="logo">Logo strip</option>
-          </select>
-        </label>
-        <label class="field"><span>Theme</span>
-          <select id="f-theme">
-            <option value="">Default</option>
-            <option value="neutral">Neutral</option>
-            <option value="psa">PSA</option>
-            <option value="bgs">Beckett (BGS)</option>
-            <option value="cgc">CGC</option>
-            <option value="sgc">SGC</option>
-            <option value="tag">TAG</option>
-          </select>
-        </label>
-        <label class="field" id="tone-field" hidden><span>BGS label</span>
-          <select id="f-bgsTone">
-            <option value="">Auto</option>
-            <option value="black">Black</option>
-            <option value="gold">Gold</option>
-            <option value="silver">Silver</option>
-          </select>
-        </label>
-      </div>
-      <div class="imgrow">
-        <img id="img-preview" class="preview" alt="" hidden>
-        <label class="filebtn">Photo<input id="f-image" type="file" accept="image/*" hidden></label>
-        <select id="f-fit" title="Photo fit">
-          <option value="cover">Cover</option>
-          <option value="contain">Contain</option>
-        </select>
-        <button id="btn-img-clear" class="ghost small" type="button">Clear</button>
-      </div>
-      <div class="imgrow">
-        <img id="bg-preview" class="preview" alt="" hidden>
-        <label class="filebtn">Background<input id="f-bgImage" type="file" accept="image/*" hidden></label>
-        <select id="f-bgFit" title="Background fit">
-          <option value="cover">Cover</option>
-          <option value="contain">Contain</option>
-        </select>
-        <button id="btn-bg-clear" class="ghost small" type="button">Clear</button>
-      </div>
-      <div class="imgrow">
-        <img id="logo-preview" class="preview" alt="" hidden>
-        <label class="filebtn">Logo<input id="f-logoImage" type="file" accept="image/*" hidden></label>
-        <button id="btn-logo-clear" class="ghost small" type="button">Clear</button>
-      </div>
       <div class="btnrow">
         <button id="btn-new" type="button">New</button>
         <button id="btn-dup" type="button">Duplicate</button>
         <button id="btn-del" class="danger" type="button">Delete</button>
         <button class="undo-btn" type="button" disabled>Undo</button>
       </div>
+    </section>
+
+    <section class="card">
+      <h2>Label Images</h2>
+      <div class="imgrow">
+        <img id="logo-preview" class="preview" alt="" hidden>
+        <label class="filebtn">
+          <span class="filebtn-main">Brand logo</span>
+          <span class="filebtn-hint">Click to upload image</span>
+          <input id="f-logoImage" type="file" accept="image/*" hidden>
+        </label>
+        <div class="slotctl">
+          <select id="f-layout" title="Placement">
+            <option value="thumb">Left</option>
+            <option value="bleed">Background</option>
+            <option value="logo">Top strip</option>
+            <option value="theme">Theme position</option>
+          </select>
+          <select id="f-logoFit" title="Fit">
+            <option value="contain">Contain</option>
+            <option value="cover">Cover</option>
+          </select>
+        </div>
+        <button id="btn-logo-clear" class="ghost small" type="button">Clear</button>
+      </div>
+      <div class="imgrow">
+        <img id="bg-preview" class="preview" alt="" hidden>
+        <label class="filebtn" title="Full-label backdrop">
+          <span class="filebtn-main">Background</span>
+          <span class="filebtn-hint">Click to upload image</span>
+          <input id="f-bgImage" type="file" accept="image/*" hidden>
+        </label>
+        <div class="slotctl">
+          <select id="f-bgFit" title="Background fit">
+            <option value="cover">Cover</option>
+            <option value="contain">Contain</option>
+          </select>
+        </div>
+        <button id="btn-bg-clear" class="ghost small" type="button">Clear</button>
+      </div>
+      <label class="field" id="tone-field" hidden><span>BGS label</span>
+        <select id="f-bgsTone">
+          <option value="">Auto</option>
+          <option value="black">Black</option>
+          <option value="gold">Gold</option>
+          <option value="silver">Silver</option>
+        </select>
+      </label>
     </section>
 
     <section class="card">
@@ -119,6 +116,18 @@
           </select>
         </label>
         <label class="field"><span>Label border (px)</span><input id="s-border" type="number" step="0.5" min="0" max="6"></label>
+        <label class="field"><span>Label font</span>
+          <select id="s-font">
+            <option value="">Theme default</option>
+            <option value="roboto">Roboto</option>
+            <option value="figtree">Figtree</option>
+            <option value="helvetica">Helvetica Neue</option>
+            <option value="arial">Arial</option>
+            <option value="georgia">Georgia</option>
+            <option value="courier">Courier New</option>
+          </select>
+        </label>
+        <label class="field"><span>Text size</span><input id="s-fontScale" type="number" step="0.05" min="0.6" max="2"></label>
       </div>
       <div class="accentrow">
         <label class="field"><span>Accent</span><input id="s-accent" type="color" value="#c8102e"></label>
@@ -170,6 +179,6 @@
 </main>
 
 <div id="status" class="status no-print" role="status"></div>
-<script type="module" src="app.js?v=26.11"></script>
+<script type="module" src="app.js?v=26.11.14"></script>
 </body>
 </html>

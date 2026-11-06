@@ -79,6 +79,9 @@ assert.equal(clamped.settings.margin, DEFAULT_SETTINGS.margin);
 assert.equal(clamped.settings.cutlines, false);
 assert.equal(clamped.settings.border, 1, 'border default');
 assert.equal(cleanImport({ settings: { border: 99 }, labels: [{ name: 'x' }] }).settings.border, 6, 'border clamped');
+assert.equal(cleanImport({ settings: { font: 'roboto' }, labels: [{ name: 'x' }] }).settings.font, 'roboto', 'font kept');
+assert.equal(cleanImport({ settings: { font: 'evil' }, labels: [{ name: 'x' }] }).settings.font, '', 'unknown font dropped');
+assert.equal(cleanImport({ settings: { fontScale: 99 }, labels: [{ name: 'x' }] }).settings.fontScale, 2, 'fontScale clamped');
 assert.ok(!('drop' in clamped.settings));
 
 // Import: unsafe fields dropped or sanitised
@@ -101,6 +104,7 @@ assert.equal(unsafe.labels[0].image, null);
 assert.equal(unsafe.labels[0].layout, 'thumb');
 assert.equal(unsafe.labels[0].theme, '');
 assert.equal(unsafe.labels[0].customLines.length, 6);
+assert.equal(cleanImport({ labels: [{ layout: 'theme' }] }).labels[0].layout, 'theme', 'theme placement kept');
 assert.notEqual(unsafe.labels[0].id, unsafe.labels[1].id, 'duplicate ids replaced');
 
 // Import: valid data image kept
@@ -116,6 +120,11 @@ assert.equal(two.labels[0].image, null);
 assert.equal(two.labels[0].bgImage, bg);
 assert.equal(two.labels[0].bgFit, 'contain');
 assert.equal(two.labels[0].fit, 'cover');
+assert.equal(cleanImport({ labels: [{}] }).labels[0].logoFit, 'contain');
+assert.equal(
+  cleanImport({ labels: [{ logoFit: 'bogus' }] }).labels[0].logoFit,
+  'contain'
+);
 assert.equal(
   cleanImport({ labels: [{ bgImage: 'javascript:x' }] }).labels[0].bgImage,
   null

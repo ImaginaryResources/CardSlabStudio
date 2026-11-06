@@ -3,6 +3,10 @@ import {
   PAPERS,
   LAYOUTS,
   LABEL_TEXT,
+  LABEL_FONTS,
+  THEME_BORDER,
+  THEME_FONT_SCALE,
+  CERT_LEN,
   uid,
   newLabel,
   toneFor,
@@ -11,7 +15,7 @@ import {
   gridFor,
   paginate,
   cleanImport,
-} from './lib.js?v=26.11';
+} from './lib.js?v=26.11.14';
 
 const KEY = 'cardslabstudio.v1';
 const $ = (sel) => document.querySelector(sel);
@@ -146,6 +150,8 @@ function renderSettings() {
   $('#s-offsetX').value = s.offsetX;
   $('#s-offsetY').value = s.offsetY;
   $('#s-border').value = s.border;
+  $('#s-font').value = s.font;
+  $('#s-fontScale').value = s.fontScale;
   $('#s-cutlines').checked = s.cutlines;
   $('#s-calib').checked = s.calib;
   $('#s-accent').value = s.accent || '#c8102e';
@@ -154,11 +160,15 @@ function renderSettings() {
   });
 }
 
-function resetThemeDefaults() {
+function resetThemeDefaults(theme = state.settings.theme) {
+  const border = THEME_BORDER[theme] ?? DEFAULT_SETTINGS.border;
+  const scale = THEME_FONT_SCALE[theme] ?? DEFAULT_SETTINGS.fontScale;
   state.settings.accent = '';
-  state.settings.border = DEFAULT_SETTINGS.border;
+  state.settings.border = border;
+  state.settings.fontScale = scale;
   $('#s-accent').value = '#c8102e';
-  $('#s-border').value = DEFAULT_SETTINGS.border;
+  $('#s-border').value = border;
+  $('#s-fontScale').value = scale;
 }
 
 function renderForm() {
@@ -168,19 +178,11 @@ function renderForm() {
   }
   $('#f-lines').value = label ? label.customLines.join('\n') : '';
   $('#f-layout').value = label ? label.layout : 'thumb';
-  $('#f-theme').value = label ? label.theme : '';
   $('#f-bgsTone').value = label ? label.bgsTone : '';
-  $('#tone-field').hidden = (label ? label.theme || state.settings.theme : state.settings.theme) !== 'bgs';
-  $('#f-fit').value = label ? label.fit : 'cover';
+  $('#tone-field').hidden = state.settings.theme !== 'bgs';
+  $('#f-certNo').placeholder = '0'.repeat(CERT_LEN[state.settings.theme] || 8);
   $('#f-bgFit').value = label ? label.bgFit : 'cover';
-  const preview = $('#img-preview');
-  if (label && label.image) {
-    preview.src = label.image;
-    preview.hidden = false;
-  } else {
-    preview.removeAttribute('src');
-    preview.hidden = true;
-  }
+  $('#f-logoFit').value = label ? label.logoFit : 'contain';
   const bgPreview = $('#bg-preview');
   if (label && label.bgImage) {
     bgPreview.src = label.bgImage;
@@ -190,8 +192,9 @@ function renderForm() {
     bgPreview.hidden = true;
   }
   const logoPreview = $('#logo-preview');
-  if (label && label.logoImage) {
-    logoPreview.src = label.logoImage;
+  const art = label && (label.logoImage || label.image);
+  if (art) {
+    logoPreview.src = art;
     logoPreview.hidden = false;
   } else {
     logoPreview.removeAttribute('src');
@@ -235,11 +238,12 @@ function barcodeEl(value) {
   }
   const ns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(ns, 'svg');
-  const total = bars.reduce((sum, bar) => sum + bar.w, 0) + 20;
+  const total = bars.reduce((sum, bar) => sum + bar.w, 0) + 10;
   svg.setAttribute('viewBox', `0 0 ${total} 1`);
   svg.setAttribute('preserveAspectRatio', 'none');
   svg.setAttribute('aria-hidden', 'true');
-  let x = 10;
+  // No leading quiet zone: label padding is wider than the 10x spec, keeps bars flush left.
+  let x = 0;
   for (const bar of bars) {
     if (bar.on) {
       const rect = document.createElementNS(ns, 'rect');
@@ -307,10 +311,11 @@ function qrEl(value) {
 
 function logoEl(label, text, extra = '') {
   const box = el('div', `lb-logo ${extra}`.trim());
-  if (label.logoImage) {
+  if (label.layout === 'theme' && label.logoImage) {
     const img = document.createElement('img');
     img.src = label.logoImage;
     img.alt = '';
+    img.style.objectFit = label.logoFit || 'contain';
     box.append(img);
   } else {
     box.append(el('span', 'lb-logo-text', text));
@@ -330,7 +335,8 @@ function cgcHeader(label) {
 
 function gradeEl(label, theme) {
   const cardNo = String(label.cardNo || '').replace(/^#/, '');
-  if (!label.gradeValue && !label.gradeLabel && !(theme === 'psa' && cardNo) && !(theme === 'bgs' && label.certNo)) {
+  const serial = theme === 'psa' || theme === 'bgs' ? label.certNo || '' : '';
+  if (!label.gradeValue && !label.gradeLabel && !cardNo && !serial) {
     return null;
   }
   const grade = el('div', 'lb-grade');
@@ -345,7 +351,9 @@ function gradeEl(label, theme) {
     if (label.gradeValue) grade.append(el('div', 'gv', label.gradeValue));
     if (label.gradeLabel) grade.append(el('div', 'gl', label.gradeLabel));
   }
-  if (theme === 'bgs' && label.certNo) grade.append(el('div', 'lb-serial', label.certNo));
+  if ((theme === 'bgs' || theme === 'psa') && serial) {
+    grade.append(el('div', 'lb-serial', serial));
+  }
   return grade;
 }
 
@@ -357,7 +365,8 @@ function fillMain(main, label, theme) {
   };
   if (theme === 'psa') {
     add('lb-sub', meta);
-    add('lb-name', [label.name, label.variation].filter(Boolean).join(' - '));
+    add('lb-name', label.name);
+    add('lb-line', label.variation);
     for (const line of label.customLines) add('lb-line', line);
   } else if (theme === 'bgs') {
     add('lb-sub', meta);
@@ -381,9 +390,10 @@ function fillMain(main, label, theme) {
     add('lb-sub', meta);
     add('lb-line', label.variation);
     for (const line of label.customLines) add('lb-line', line);
+    const cert = label.certNo || '';
     const foot = [
       cardNo ? `#${cardNo}` : '',
-      label.certNo ? `Cert ${label.certNo}` : '',
+      cert ? `Cert ${cert}` : '',
     ]
       .filter(Boolean)
       .join(' · ');
@@ -391,12 +401,12 @@ function fillMain(main, label, theme) {
   }
 }
 
-function codeFooter(label) {
+function codeFooter(label, withValue = true) {
   const value = String(label.certNo || label.cardNo || '').replace(/^#/, '').trim();
   if (!value) return null;
   const foot = el('div', 'lb-codes');
   foot.append(barcodeEl(value));
-  foot.append(el('div', 'lb-code-val', label.certNo || value));
+  if (withValue) foot.append(el('div', 'lb-code-val', label.certNo || value));
   return foot;
 }
 
@@ -417,41 +427,52 @@ function tagSide(label) {
 
 function labelEl(label, settings) {
   const layout = LAYOUTS.includes(label.layout) ? label.layout : 'thumb';
-  const theme = label.theme || settings.theme;
-  const root = el('div', 'label ' + layout);
+  const theme = settings.theme;
+  const hasMark = theme === 'psa' || theme === 'cgc' || theme === 'bgs';
+  const place = layout === 'theme' && (!hasMark || !label.logoImage) ? 'thumb' : layout;
+  const root = el('div', 'label ' + place);
+  root.dataset.id = label.id;
   root.dataset.theme = theme;
   if (theme === 'bgs') root.dataset.tone = toneFor(label);
   if (settings.accent) root.style.setProperty('--l-accent', settings.accent);
+  if (LABEL_FONTS[settings.font]) root.style.setProperty('--l-font', LABEL_FONTS[settings.font]);
+  if (settings.fontScale !== 1) root.style.setProperty('--l-scale', settings.fontScale);
   root.style.setProperty('--l-border-w', settings.border + 'px');
   if (label.id === state.selectedId) root.classList.add('selected');
   root.addEventListener('click', () => select(label.id));
 
   const body = el('div', 'lb-body');
+  const art = place === 'theme' ? null : (label.logoImage || label.image);
+  const artFit = label.logoImage ? label.logoFit : label.fit;
 
   if (label.bgImage) {
     root.classList.add('has-bg');
     root.append(imgEl(label.bgImage, label.bgFit, 'lb-bg'));
   }
 
-  if (layout === 'logo' && label.image) {
+  if (place === 'logo' && art) {
     const top = el('div', 'lb-top');
-    top.append(imgEl(label.image, label.fit));
+    top.append(imgEl(art, artFit));
     body.append(top);
   }
-  if (layout === 'bleed' && label.image && !label.bgImage) {
-    root.append(imgEl(label.image, 'cover', 'lb-bleed-img'));
+  if (place === 'bleed' && art && !label.bgImage) {
+    root.append(imgEl(art, 'cover', 'lb-bleed-img'));
   }
   if (theme === 'cgc') root.append(cgcHeader(label));
 
   const row = el('div', 'lb-row');
   if (theme === 'bgs') row.append(logoEl(label, 'BGS'));
-  if (label.image && (layout === 'thumb' || (layout === 'bleed' && label.bgImage))) {
-    row.append(imgEl(label.image, label.fit));
+  if (art && (place === 'thumb' || (place === 'bleed' && label.bgImage))) {
+    row.append(imgEl(art, artFit));
   }
 
   const main = el('div', 'lb-main');
   if (theme === 'tag') main.classList.add('lb-frame');
   fillMain(main, label, theme);
+  if (theme === 'psa') {
+    const bars = codeFooter(label, false);
+    if (bars) main.append(bars);
+  }
   row.append(main);
 
   if (theme === 'tag') {
@@ -463,12 +484,47 @@ function labelEl(label, settings) {
   }
 
   body.append(row);
-  if (theme === 'psa' || theme === 'cgc') {
+  if (theme === 'cgc') {
     const foot = codeFooter(label);
     if (foot) body.append(foot);
   }
   root.append(body);
   return root;
+}
+
+// PSA theme position: bottom-centre brand logo, measured from the variation line
+// up to the end of the first line. Overlaps the border on purpose.
+function psaLogoBox(root) {
+  const label = state.labels.find((item) => item.id === root.dataset.id);
+  if (label?.layout !== 'theme' || !label.logoImage) return;
+  const first = root.querySelector('.lb-sub');
+  const line = root.querySelector('.lb-line');
+  const text = line && line.firstChild;
+  const rootRect = root.getBoundingClientRect();
+  if (!first || !text || text.nodeType !== 3 || !text.length || !rootRect.width) return;
+  // .sheets zoom scales client rects but not style px, so normalise by the ratio.
+  const z = rootRect.width / root.offsetWidth;
+  const em = parseFloat(getComputedStyle(line).fontSize);
+  const range = document.createRange();
+  range.selectNodeContents(first);
+  const right = range.getBoundingClientRect().right;
+  range.setStart(text, text.length - 1);
+  range.setEnd(text, text.length);
+  const sRect = range.getBoundingClientRect();
+  const top = line.getBoundingClientRect().bottom;
+  const width = (right - sRect.left + em * 0.35) / z;
+  const height = (rootRect.bottom - top) / z;
+  const box = el('div', 'lb-logo-box');
+  const img = document.createElement('img');
+  img.src = label.logoImage;
+  img.alt = '';
+  img.style.objectFit = label.logoFit || 'contain';
+  box.append(img);
+  box.style.width = `${width}px`;
+  box.style.height = `${height}px`;
+  box.style.left = `${(root.clientWidth - width) / 2}px`;
+  box.style.top = `${(top - (rootRect.top + root.clientTop)) / z}px`;
+  root.append(box);
 }
 
 function renderSheet() {
@@ -509,6 +565,9 @@ function renderSheet() {
     wrap.append(sheet);
     host.append(wrap);
   });
+
+  // PSA logo box: bottom-centre white block on every PSA label.
+  host.querySelectorAll('.label[data-theme="psa"]').forEach(psaLogoBox);
 
   if (s.calib) {
     const wrap = el('div', 'page-wrap');
@@ -681,45 +740,11 @@ function bind() {
     commit();
   });
 
-  $('#f-theme').addEventListener('change', (event) => {
-    const label = sel();
-    if (!label) return;
-    label.theme = event.target.value;
-    resetThemeDefaults();
-    commit();
-    renderForm();
-  });
-
   $('#f-bgsTone').addEventListener('change', (event) => {
     const label = sel();
     if (!label) return;
     label.bgsTone = event.target.value;
     commit();
-  });
-
-  $('#f-fit').addEventListener('change', (event) => {
-    const label = sel();
-    if (!label) return;
-    label.fit = event.target.value;
-    commit();
-  });
-
-  $('#f-image').addEventListener('change', async (event) => {
-    const file = event.target.files && event.target.files[0];
-    event.target.value = '';
-    const label = sel();
-    if (!label || !file) return;
-    if (!file.type.startsWith('image/')) {
-      toast('Choose an image file.', true);
-      return;
-    }
-    try {
-      label.image = await shrink(file);
-      commit();
-      renderForm();
-    } catch {
-      toast('Could not read that image.', true);
-    }
   });
 
   $('#f-bgImage').addEventListener('change', async (event) => {
@@ -747,6 +772,13 @@ function bind() {
     commit();
   });
 
+  $('#f-logoFit').addEventListener('change', (event) => {
+    const label = sel();
+    if (!label) return;
+    label.logoFit = event.target.value;
+    commit();
+  });
+
   $('#f-logoImage').addEventListener('change', async (event) => {
     const file = event.target.files && event.target.files[0];
     event.target.value = '';
@@ -758,6 +790,7 @@ function bind() {
     }
     try {
       label.logoImage = await shrink(file, true);
+      label.image = null;
       commit();
       renderForm();
     } catch {
@@ -769,6 +802,7 @@ function bind() {
     const label = sel();
     if (!label) return;
     label.logoImage = null;
+    label.image = null;
     commit();
     renderForm();
   });
@@ -777,14 +811,6 @@ function bind() {
     const label = sel();
     if (!label) return;
     label.bgImage = null;
-    commit();
-    renderForm();
-  });
-
-  $('#btn-img-clear').addEventListener('click', () => {
-    const label = sel();
-    if (!label) return;
-    label.image = null;
     commit();
     renderForm();
   });
@@ -853,7 +879,7 @@ function bind() {
 
   $('#s-theme').addEventListener('change', (event) => {
     state.settings.theme = event.target.value;
-    resetThemeDefaults();
+    resetThemeDefaults(event.target.value);
     commit();
     renderForm();
   });
@@ -874,7 +900,7 @@ function bind() {
   });
 
   $('#s-accent-reset').addEventListener('click', () => {
-    resetThemeDefaults();
+    resetThemeDefaults(state.settings.theme);
     commit();
   });
 
@@ -888,6 +914,12 @@ function bind() {
   bindNumber('#s-offsetX', 'offsetX', -2, 2);
   bindNumber('#s-offsetY', 'offsetY', -2, 2);
   bindNumber('#s-border', 'border', 0, 6);
+  bindNumber('#s-fontScale', 'fontScale', 0.6, 2);
+
+  $('#s-font').addEventListener('change', (event) => {
+    state.settings.font = event.target.value;
+    commit();
+  });
 
   $('#btn-print').addEventListener('click', () => {
     saveNow();

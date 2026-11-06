@@ -3,9 +3,29 @@ export const PAPERS = {
   letter: { name: 'Letter', w: 8.5, h: 11 },
 };
 
-export const LAYOUTS = ['thumb', 'bleed', 'logo'];
+export const LAYOUTS = ['thumb', 'bleed', 'logo', 'theme'];
 export const THEMES = ['neutral', 'psa', 'bgs', 'cgc', 'sgc', 'tag'];
 export const BGS_TONES = ['', 'black', 'gold', 'silver'];
+
+/** Border width a theme wants when it is selected. */
+export const THEME_BORDER = { psa: 6 };
+
+/** Text scale a theme wants when it is selected. */
+export const THEME_FONT_SCALE = { psa: 0.9 };
+
+/** Digits shown as the cert # placeholder, by theme. */
+export const CERT_LEN = { neutral: 8, psa: 9, bgs: 10, cgc: 10, sgc: 7, tag: 8 };
+
+/** Label font overrides. Empty id = keep the theme's font. */
+export const LABEL_FONTS = {
+  '': '',
+  roboto: 'Roboto, "Helvetica Neue", Arial, sans-serif',
+  figtree: 'Figtree, "Helvetica Neue", Arial, sans-serif',
+  helvetica: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+  arial: 'Arial, Helvetica, sans-serif',
+  georgia: 'Georgia, "Times New Roman", serif',
+  courier: '"Courier New", Courier, monospace',
+};
 
 export const DEFAULT_SETTINGS = {
   paper: 'a4',
@@ -20,6 +40,8 @@ export const DEFAULT_SETTINGS = {
   offsetY: 0,
   theme: 'neutral',
   accent: '',
+  font: '',
+  fontScale: 1,
   border: 1,
   cutlines: true,
   calib: false,
@@ -47,6 +69,7 @@ const NUMBER_LIMITS = {
   offsetX: [-2, 2],
   offsetY: [-2, 2],
   border: [0, 6],
+  fontScale: [0.6, 2],
 };
 
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
@@ -76,6 +99,7 @@ export function newLabel() {
     bgImage: null,
     bgFit: 'cover',
     logoImage: null,
+    logoFit: 'contain',
     bgsTone: '',
     layout: 'thumb',
     theme: '',
@@ -197,6 +221,7 @@ export function cleanImport(raw) {
     if (typeof rs.accent === 'string' && ACCENT_RE.test(rs.accent)) {
       settings.accent = rs.accent;
     }
+    if (typeof rs.font === 'string' && rs.font in LABEL_FONTS) settings.font = rs.font;
     if (typeof rs.cutlines === 'boolean') settings.cutlines = rs.cutlines;
     if (typeof rs.calib === 'boolean') settings.calib = rs.calib;
   }
@@ -227,6 +252,7 @@ export function cleanImport(raw) {
     if (typeof src.logoImage === 'string' && IMAGE_RE.test(src.logoImage)) {
       label.logoImage = src.logoImage;
     }
+    if (src.logoFit === 'contain' || src.logoFit === 'cover') label.logoFit = src.logoFit;
     if (BGS_TONES.includes(src.bgsTone)) label.bgsTone = src.bgsTone;
     if (LAYOUTS.includes(src.layout)) label.layout = src.layout;
     if (THEMES.includes(src.theme)) label.theme = src.theme;
