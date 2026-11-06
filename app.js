@@ -11,7 +11,7 @@ import {
   cleanImport,
 } from './lib.js?v=26.11';
 
-const KEY = 'opengrading.v1';
+const KEY = 'cardslabstudio.v1';
 const $ = (sel) => document.querySelector(sel);
 
 const el = (tag, cls, text) => {
@@ -53,7 +53,7 @@ function undoDelete() {
   scheduleSave();
 }
 
-const THEME_KEY = 'opengrading.theme';
+const THEME_KEY = 'cardslabstudio.theme';
 const ICON_MOON =
   '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>';
 const ICON_SUN =
@@ -427,7 +427,7 @@ function exportBackup() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `opengrading-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = `cardslab-studio-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

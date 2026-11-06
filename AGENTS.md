@@ -16,7 +16,7 @@ Serve over HTTP; opening `index.html` via `file://` breaks ES modules.
 - `lib.js` — pure helpers (defaults, grid math, pagination, `cleanImport`). Must stay DOM-free: `check.mjs` imports it directly in Node.
 - `app.js` — all DOM/state/localStorage/image/print logic.
 - `index.html`, `style.css` — markup, screen UI, themes, print rules.
-- Data lives only in `localStorage` key `opengrading.v1` (theme: `opengrading.theme`); images are embedded data URLs.
+- Data lives only in `localStorage` key `cardslabstudio.v1` (theme: `cardslabstudio.theme`); images are embedded data URLs.
 
 ## Gotchas
 

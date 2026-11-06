@@ -1,4 +1,4 @@
-# OpenGrading
+# CardSlab Studio
 
 Local slab-label maker for card grading slabs. Prints labels at exactly **2.72 × 0.84 in** on A4 (or Letter / custom) with photos, custom text, and grades. Static files, no dependencies, no build, works offline.
 
