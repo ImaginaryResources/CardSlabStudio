@@ -603,7 +603,7 @@ button.small { padding: 4px 8px; font-size: 12px; }
   --l-text: #111111;
   --l-muted: #5b6470;
   --l-accent: #c8102e;
-  --l-border: #c8102e;
+  --l-border: var(--l-accent);
   --l-font: Roboto, "Helvetica Neue", Arial, sans-serif;
   overflow: visible; /* PSA logo box paints over the bottom border */
 }
