@@ -3,6 +3,7 @@ import {
   DEFAULT_SETTINGS,
   THEMES,
   pageSize,
+  stamp,
   gridFor,
   paginate,
   cleanImport,
@@ -49,6 +50,10 @@ assert.equal(pageSize(settings({ paper: 'custom', pageW: 1, pageH: 1 })).w, 3);
 
 // Missing / invalid paper falls back to A4
 assert.equal(pageSize(settings({ paper: 'bogus' })).w, 8.27);
+
+// Print/export timestamp: local time, zero-padded, filename-safe
+assert.equal(stamp(new Date(2026, 10, 11, 14, 32)), '20261111-1432');
+assert.equal(stamp(new Date(2027, 0, 2, 3, 4)), '20270102-0304');
 
 // Pagination
 const items = Array.from({ length: 27 }, (_, i) => i);

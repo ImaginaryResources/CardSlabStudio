@@ -13,6 +13,7 @@ import {
   toneFor,
   code39Bars,
   pageSize,
+  stamp,
   gridFor,
   paginate,
   cleanImport,
@@ -20,7 +21,7 @@ import {
   hsvToHex,
   hsvToRgb,
   hexToHsv,
-} from './lib.js?v=26.11.17';
+} from './lib.js?v=26.11.24';
 
 const KEY = 'cardslabstudio.v1';
 const $ = (sel) => document.querySelector(sel);
@@ -451,6 +452,8 @@ function labelEl(label, settings) {
   root.dataset.id = label.id;
   root.dataset.theme = theme;
   if (theme === 'bgs') root.dataset.tone = toneFor(label);
+  // Dark labels need the red cut line; black would disappear on them.
+  if (label.bgImage || theme === 'sgc' || root.dataset.tone === 'black') root.classList.add('cut-light');
   if (label.accent) root.style.setProperty('--l-accent', label.accent);
   if (LABEL_FONTS[settings.font]) root.style.setProperty('--l-font', LABEL_FONTS[settings.font]);
   if (settings.fontScale !== 1) root.style.setProperty('--l-scale', settings.fontScale);
@@ -579,6 +582,7 @@ function renderSheet() {
     for (const label of items) layoutGrid.append(labelEl(label, s));
     inner.append(layoutGrid);
     sheet.append(inner);
+    sheet.append(el('div', 'print-stamp', stamp()));
     wrap.append(sheet);
     host.append(wrap);
   });
@@ -703,6 +707,18 @@ function applyPageStyle() {
   style.textContent = `@page { size: ${page}; margin: 0; }`;
 }
 
+// Browsers name "Save as PDF" after document.title, so the print timestamp
+// doubles as the filename. BASE_TITLE puts the tab title back afterwards.
+const BASE_TITLE = document.title;
+
+function applyPrintStamp() {
+  const now = stamp();
+  document.title = `cardslab-${now}`;
+  document.querySelectorAll('.print-stamp').forEach((node) => {
+    node.textContent = now;
+  });
+}
+
 function exportBackup() {
   const payload = JSON.stringify(
     { version: 1, settings: state.settings, labels: state.labels },
@@ -713,7 +729,7 @@ function exportBackup() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `cardslab-studio-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = `cardslab-studio-${stamp()}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
@@ -1032,6 +1048,7 @@ function bind() {
   $('#btn-print').addEventListener('click', () => {
     saveNow();
     applyPageStyle();
+    applyPrintStamp();
     window.print();
   });
 
@@ -1060,7 +1077,13 @@ function bind() {
     }
   });
 
-  window.addEventListener('beforeprint', applyPageStyle);
+  window.addEventListener('beforeprint', () => {
+    applyPageStyle();
+    applyPrintStamp();
+  });
+  window.addEventListener('afterprint', () => {
+    document.title = BASE_TITLE;
+  });
   window.addEventListener('beforeunload', saveNow);
 }
 

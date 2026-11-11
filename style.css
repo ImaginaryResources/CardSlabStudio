@@ -57,7 +57,7 @@
   --surface-3: #f1f5f9;
   --panel: #f8fafc;
   --accent: #2563eb;
-  --guide: rgba(100, 110, 120, 0.65);
+  --guide: rgba(0, 0, 0, 0.75);
   --page-w: 8.27in;
   --page-h: 11.69in;
 }
@@ -73,7 +73,7 @@
   --surface-3: #232a31;
   --panel: #14181c;
   --accent: #4f8cff;
-  --guide: rgba(170, 180, 190, 0.55);
+  --guide: rgba(255, 255, 255, 0.7);
 }
 
 * { box-sizing: border-box; }
@@ -442,6 +442,16 @@ button.small { padding: 4px 8px; font-size: 12px; }
   gap: 6px;
 }
 .page-tag { font-size: 11px; color: var(--muted); height: 14px; }
+/* Print timestamp: absolute so it never grows the page box. 0.25in keeps it
+   inside the unprintable margin of common inkjet/laser printers. */
+.print-stamp {
+  position: absolute;
+  right: 0.25in;
+  bottom: 0.25in;
+  font-size: 7px;
+  color: #9ca3af;
+  pointer-events: none;
+}
 
 .sheet {
   position: relative;
@@ -961,8 +971,10 @@ button.small { padding: 4px 8px; font-size: 12px; }
   white-space: nowrap;
 }
 
+/* Black cut line vanishes on dark labels, so those get red. */
+.label.cut-light { --cut: #ef4444; }
 .sheets.show-cutlines .label {
-  outline: 0.5pt solid var(--guide);
+  outline: 0.5pt solid var(--cut, var(--guide));
   outline-offset: -1px;
 }
 
@@ -1076,7 +1088,7 @@ button.small { padding: 4px 8px; font-size: 12px; }
   }
   .label.selected { outline: 0 !important; }
   .sheets.show-cutlines .label {
-    outline: 0.5pt solid #9ca3af !important;
+    outline: 0.5pt solid var(--cut, #000) !important;
     outline-offset: -1px;
   }
 }

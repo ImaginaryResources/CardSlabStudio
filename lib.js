@@ -169,6 +169,15 @@ export function pageSize(settings) {
   return { w: p.w, h: p.h };
 }
 
+// Local date-time as YYYYMMDD-HHmm: filename-safe, no locale surprises.
+export function stamp(d = new Date()) {
+  const p = (n) => String(n).padStart(2, '0');
+  return (
+    `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}` +
+    `-${p(d.getHours())}${p(d.getMinutes())}`
+  );
+}
+
 export function gridFor(settings) {
   const page = pageSize(settings);
   const gap = clamp(num(settings.gap, 0.1), 0, 1);
