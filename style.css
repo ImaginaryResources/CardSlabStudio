@@ -73,7 +73,7 @@
   --surface-3: #232a31;
   --panel: #14181c;
   --accent: #4f8cff;
-  --guide: rgba(255, 255, 255, 0.7);
+  --guide: rgba(0, 0, 0, 0.75);
 }
 
 * { box-sizing: border-box; }
@@ -971,10 +971,35 @@ button.small { padding: 4px 8px; font-size: 12px; }
   white-space: nowrap;
 }
 
+/* Full-page cut guides follow each label edge and are clipped by .sheet. */
+.cell { position: relative; }
+.sheets.show-cutlines .cell::before,
+.sheets.show-cutlines .cell::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+}
+.sheets.show-cutlines .cell::before {
+  top: -100in;
+  bottom: -100in;
+  left: 0;
+  right: 0;
+  border-left: 1px solid var(--guide);
+  border-right: 1px solid var(--guide);
+}
+.sheets.show-cutlines .cell::after {
+  left: -100in;
+  right: -100in;
+  top: 0;
+  bottom: 0;
+  border-top: 1px solid var(--guide);
+  border-bottom: 1px solid var(--guide);
+}
 /* Black cut line vanishes on dark labels, so those get red. */
 .label.cut-light { --cut: #ef4444; }
-.sheets.show-cutlines .label {
-  outline: 0.5pt solid var(--cut, var(--guide));
+.sheets.show-cutlines .label.cut-light {
+  outline: 0.5pt solid var(--cut);
   outline-offset: -1px;
 }
 
@@ -1087,8 +1112,16 @@ button.small { padding: 4px 8px; font-size: 12px; }
     height: calc(var(--page-h) - 0.4mm) !important;
   }
   .label.selected { outline: 0 !important; }
-  .sheets.show-cutlines .label {
-    outline: 0.5pt solid var(--cut, #000) !important;
+  .sheets.show-cutlines .cell::before {
+    border-width: 0 0.5pt;
+    border-color: #000;
+  }
+  .sheets.show-cutlines .cell::after {
+    border-width: 0.5pt 0;
+    border-color: #000;
+  }
+  .sheets.show-cutlines .label.cut-light {
+    outline: 0.5pt solid #ef4444 !important;
     outline-offset: -1px;
   }
 }

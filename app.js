@@ -21,7 +21,7 @@ import {
   hsvToHex,
   hsvToRgb,
   hexToHsv,
-} from './lib.js?v=26.11.24';
+} from './lib.js?v=26.11.25';
 
 const KEY = 'cardslabstudio.v1';
 const $ = (sel) => document.querySelector(sel);
@@ -579,7 +579,11 @@ function renderSheet() {
     layoutGrid.style.gridAutoRows = `${grid.labelH}in`;
     layoutGrid.style.gap = `${grid.gap}in`;
 
-    for (const label of items) layoutGrid.append(labelEl(label, s));
+    for (let i = 0; i < grid.perPage; i += 1) {
+      const cell = el('div', 'cell');
+      if (items[i]) cell.append(labelEl(items[i], s));
+      layoutGrid.append(cell);
+    }
     inner.append(layoutGrid);
     sheet.append(inner);
     sheet.append(el('div', 'print-stamp', stamp()));
