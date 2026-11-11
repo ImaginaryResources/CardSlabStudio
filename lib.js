@@ -13,6 +13,16 @@ export const THEME_BORDER = { psa: 6 };
 /** Text scale a theme wants when it is selected. */
 export const THEME_FONT_SCALE = { psa: 0.9 };
 
+/** Accent a theme paints with until the user overrides it. Mirrors --l-accent in style.css. */
+export const THEME_ACCENT = {
+  neutral: '#101010',
+  psa: '#c8102e',
+  bgs: '#64707d',
+  cgc: '#0b57d0',
+  sgc: '#d4af37',
+  tag: '#111111',
+};
+
 /** Digits shown as the cert # placeholder, by theme. */
 export const CERT_LEN = { neutral: 8, psa: 9, bgs: 10, cgc: 10, sgc: 7, tag: 8 };
 
@@ -39,7 +49,6 @@ export const DEFAULT_SETTINGS = {
   offsetX: 0,
   offsetY: 0,
   theme: 'neutral',
-  accent: '',
   font: '',
   fontScale: 1,
   border: 1,
@@ -103,6 +112,7 @@ export function newLabel() {
     bgsTone: '',
     layout: 'thumb',
     theme: '',
+    accent: '',
   };
 }
 
@@ -199,6 +209,48 @@ export function paginate(items, perPage) {
 const IMAGE_RE = /^data:image\/(png|jpe?g|webp);base64,/i;
 const ACCENT_RE = /^#[0-9a-f]{6}$/i;
 
+/** Hex colour as #rrggbb, or '' when invalid. #rgb is expanded. */
+export function normalizeHex(value) {
+  const v = String(value ?? '').trim().toLowerCase().replace(/^#?/, '#');
+  const short = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/.exec(v);
+  if (short) return '#' + short.slice(1).map((c) => c + c).join('');
+  return ACCENT_RE.test(v) ? v : '';
+}
+
+/** HSV (h 0-360, s/v 0-1) to [r, g, b] 0-255. */
+export function hsvToRgb(h, s, v) {
+  const hue = ((h % 360) + 360) % 360;
+  const f = (n) => {
+    const k = (n + hue / 60) % 6;
+    return Math.round((v - v * s * Math.max(0, Math.min(k, 4 - k, 1))) * 255);
+  };
+  return [f(5), f(3), f(1)];
+}
+
+export function hsvToHex(h, s, v) {
+  return '#' + hsvToRgb(h, s, v).map((c) => c.toString(16).padStart(2, '0')).join('');
+}
+
+/** #rrggbb/#rgb to { h: 0-360, s: 0-1, v: 0-1 }. Invalid input reads as black. */
+export function hexToHsv(value) {
+  const hex = normalizeHex(value);
+  if (!hex) return { h: 0, s: 0, v: 0 };
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) / 255;
+  const g = ((n >> 8) & 255) / 255;
+  const b = (n & 255) / 255;
+  const max = Math.max(r, g, b);
+  const d = max - Math.min(r, g, b);
+  let h = 0;
+  if (d) {
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h = (h * 60 + 360) % 360;
+  }
+  return { h, s: max ? d / max : 0, v: max };
+}
+
 /** Parse a stored/uploaded backup. Throws on malformed data, never trusts fields. */
 export function cleanImport(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
@@ -209,6 +261,7 @@ export function cleanImport(raw) {
   }
 
   const settings = { ...DEFAULT_SETTINGS };
+  let legacyAccent = '';
   const rs = raw.settings;
   if (rs && typeof rs === 'object' && !Array.isArray(rs)) {
     if (PAPERS[rs.paper] || rs.paper === 'custom') settings.paper = rs.paper;
@@ -218,9 +271,12 @@ export function cleanImport(raw) {
       }
     }
     if (THEMES.includes(rs.theme)) settings.theme = rs.theme;
-    if (typeof rs.accent === 'string' && ACCENT_RE.test(rs.accent)) {
-      settings.accent = rs.accent;
-    }
+    // shortcut: pre-26.11.16 backups stored one accent (globally or per theme); seed labels from it.
+    legacyAccent =
+      normalizeHex(rs.accent) ||
+      (rs.accents && typeof rs.accents === 'object' && !Array.isArray(rs.accents)
+        ? normalizeHex(rs.accents[settings.theme])
+        : '');
     if (typeof rs.font === 'string' && rs.font in LABEL_FONTS) settings.font = rs.font;
     if (typeof rs.cutlines === 'boolean') settings.cutlines = rs.cutlines;
     if (typeof rs.calib === 'boolean') settings.calib = rs.calib;
@@ -256,6 +312,7 @@ export function cleanImport(raw) {
     if (BGS_TONES.includes(src.bgsTone)) label.bgsTone = src.bgsTone;
     if (LAYOUTS.includes(src.layout)) label.layout = src.layout;
     if (THEMES.includes(src.theme)) label.theme = src.theme;
+    label.accent = normalizeHex(src.accent) || legacyAccent;
     if (typeof src.id === 'string' && src.id && !seen.has(src.id)) {
       label.id = src.id;
     }

@@ -6,6 +6,7 @@ import {
   LABEL_FONTS,
   THEME_BORDER,
   THEME_FONT_SCALE,
+  THEME_ACCENT,
   CERT_LEN,
   uid,
   newLabel,
@@ -15,7 +16,11 @@ import {
   gridFor,
   paginate,
   cleanImport,
-} from './lib.js?v=26.11.14';
+  normalizeHex,
+  hsvToHex,
+  hsvToRgb,
+  hexToHsv,
+} from './lib.js?v=26.11.17';
 
 const KEY = 'cardslabstudio.v1';
 const $ = (sel) => document.querySelector(sel);
@@ -154,7 +159,6 @@ function renderSettings() {
   $('#s-fontScale').value = s.fontScale;
   $('#s-cutlines').checked = s.cutlines;
   $('#s-calib').checked = s.calib;
-  $('#s-accent').value = s.accent || '#c8102e';
   document.querySelectorAll('.custom-page').forEach((node) => {
     node.hidden = s.paper !== 'custom';
   });
@@ -163,12 +167,24 @@ function renderSettings() {
 function resetThemeDefaults(theme = state.settings.theme) {
   const border = THEME_BORDER[theme] ?? DEFAULT_SETTINGS.border;
   const scale = THEME_FONT_SCALE[theme] ?? DEFAULT_SETTINGS.fontScale;
-  state.settings.accent = '';
   state.settings.border = border;
   state.settings.fontScale = scale;
-  $('#s-accent').value = '#c8102e';
   $('#s-border').value = border;
   $('#s-fontScale').value = scale;
+}
+
+/** Accent in force for a label: its own colour, else the theme's built-in one. */
+function accentFor(label) {
+  return (label && label.accent) || THEME_ACCENT[state.settings.theme] || '#c8102e';
+}
+
+function setAccent(hex) {
+  const label = sel();
+  const norm = normalizeHex(hex);
+  if (!label || !norm) return;
+  label.accent = norm === THEME_ACCENT[state.settings.theme] ? '' : norm;
+  $('#s-accent').value = norm;
+  commit();
 }
 
 function renderForm() {
@@ -181,6 +197,7 @@ function renderForm() {
   $('#f-bgsTone').value = label ? label.bgsTone : '';
   $('#tone-field').hidden = state.settings.theme !== 'bgs';
   $('#f-certNo').placeholder = '0'.repeat(CERT_LEN[state.settings.theme] || 8);
+  $('#s-accent').value = accentFor(label);
   $('#f-bgFit').value = label ? label.bgFit : 'cover';
   $('#f-logoFit').value = label ? label.logoFit : 'contain';
   const bgPreview = $('#bg-preview');
@@ -434,7 +451,7 @@ function labelEl(label, settings) {
   root.dataset.id = label.id;
   root.dataset.theme = theme;
   if (theme === 'bgs') root.dataset.tone = toneFor(label);
-  if (settings.accent) root.style.setProperty('--l-accent', settings.accent);
+  if (label.accent) root.style.setProperty('--l-accent', label.accent);
   if (LABEL_FONTS[settings.font]) root.style.setProperty('--l-font', LABEL_FONTS[settings.font]);
   if (settings.fontScale !== 1) root.style.setProperty('--l-scale', settings.fontScale);
   root.style.setProperty('--l-border-w', settings.border + 'px');
@@ -880,6 +897,7 @@ function bind() {
   $('#s-theme').addEventListener('change', (event) => {
     state.settings.theme = event.target.value;
     resetThemeDefaults(event.target.value);
+    $('#s-accent').value = accentFor(sel());
     commit();
     renderForm();
   });
@@ -894,15 +912,105 @@ function bind() {
     commit();
   });
 
-  $('#s-accent').addEventListener('input', (event) => {
-    state.settings.accent = event.target.value;
-    commit();
+  const accentInput = $('#s-accent');
+  accentInput.addEventListener('change', () => {
+    const norm = normalizeHex(accentInput.value);
+    if (norm) setAccent(norm);
+    else accentInput.value = accentFor(sel());
+  });
+  accentInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') accentInput.blur();
+  });
+
+  document.querySelectorAll('.swatch').forEach((swatch) => {
+    swatch.addEventListener('click', () => setAccent(swatch.dataset.color));
   });
 
   $('#s-accent-reset').addEventListener('click', () => {
+    const label = sel();
+    if (label) label.accent = '';
+    accentInput.value = accentFor(label);
     resetThemeDefaults(state.settings.theme);
     commit();
   });
+
+  /* Colour wheel: hue + saturation from the disc, brightness from the slider. */
+  const wheelCanvas = $('#s-wheel');
+  const wheelCtx = wheelCanvas.getContext('2d');
+  const wheelValue = $('#s-wheel-v');
+  const wheelPop = $('#accent-wheel');
+  const wheelBtn = $('#s-accent-wheel');
+  let wheelH = 0;
+  let wheelS = 1;
+  let wheelDrag = false;
+
+  const drawWheel = (v) => {
+    const size = wheelCanvas.width;
+    const radius = size / 2;
+    const img = wheelCtx.createImageData(size, size);
+    for (let y = 0; y < size; y += 1) {
+      for (let x = 0; x < size; x += 1) {
+        const dx = x - radius + 0.5;
+        const dy = y - radius + 0.5;
+        const dist = Math.hypot(dx, dy);
+        if (dist > radius) continue;
+        const [r, g, b] = hsvToRgb((Math.atan2(dy, dx) * 180) / Math.PI, Math.min(1, dist / radius), v);
+        const i = (y * size + x) * 4;
+        img.data[i] = r;
+        img.data[i + 1] = g;
+        img.data[i + 2] = b;
+        img.data[i + 3] = Math.max(0, Math.min(255, Math.round((radius - dist) * 255)));
+      }
+    }
+    wheelCtx.putImageData(img, 0, 0);
+  };
+
+  const pickWheel = (event) => {
+    const rect = wheelCanvas.getBoundingClientRect();
+    const radius = rect.width / 2 || 1;
+    const dx = event.clientX - rect.left - radius;
+    const dy = event.clientY - rect.top - radius;
+    wheelH = ((Math.atan2(dy, dx) * 180) / Math.PI + 360) % 360;
+    wheelS = Math.min(1, Math.hypot(dx, dy) / radius);
+    syncWheelGradient();
+    setAccent(hsvToHex(wheelH, wheelS, wheelValue.value / 100));
+  };
+
+  const syncWheelGradient = () => {
+    wheelValue.style.background = `linear-gradient(to top, #000, ${hsvToHex(wheelH, wheelS, 1)})`;
+  };
+
+  wheelBtn.addEventListener('click', () => {
+    if (!wheelPop.hidden) {
+      wheelPop.hidden = true;
+      wheelBtn.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    const hsv = hexToHsv(accentFor(sel()));
+    wheelH = hsv.h;
+    wheelS = hsv.s;
+    wheelValue.value = Math.round(hsv.v * 100);
+    drawWheel(hsv.v);
+    syncWheelGradient();
+    wheelPop.hidden = false;
+    wheelBtn.setAttribute('aria-expanded', 'true');
+  });
+
+  wheelValue.addEventListener('input', () => {
+    drawWheel(wheelValue.value / 100);
+    setAccent(hsvToHex(wheelH, wheelS, wheelValue.value / 100));
+  });
+
+  wheelCanvas.addEventListener('pointerdown', (event) => {
+    wheelDrag = true;
+    wheelCanvas.setPointerCapture(event.pointerId);
+    pickWheel(event);
+  });
+  wheelCanvas.addEventListener('pointermove', (event) => {
+    if (wheelDrag) pickWheel(event);
+  });
+  wheelCanvas.addEventListener('pointerup', () => { wheelDrag = false; });
+  wheelCanvas.addEventListener('pointercancel', () => { wheelDrag = false; });
 
   bindNumber('#s-margin', 'margin', 0, 3);
   bindNumber('#s-marginTop', 'marginTop', 0, 3);

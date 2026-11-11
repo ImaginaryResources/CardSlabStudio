@@ -13,7 +13,7 @@
     }
   } catch (e) {}
 </script>
-<link rel="stylesheet" href="style.css?v=26.11.14">
+<link rel="stylesheet" href="style.css?v=26.11.17">
 </head>
 <body>
 <header class="topbar no-print">
@@ -46,6 +46,27 @@
         <label class="field"><span>Cert #</span><input id="f-certNo" autocomplete="off"></label>
       </div>
       <label class="field"><span>Custom lines (one per line)</span><textarea id="f-lines" rows="3"></textarea></label>
+      <div class="accentrow">
+        <label class="field"><span>Accent</span>
+          <input id="s-accent" type="text" maxlength="7" spellcheck="false" autocomplete="off" aria-label="Accent color, hex">
+        </label>
+        <button id="s-accent-wheel" class="ghost small" type="button" aria-expanded="false" aria-controls="accent-wheel">Color picker</button>
+        <button id="s-accent-reset" class="ghost small" type="button">Theme default</button>
+      </div>
+      <div class="swatches" role="group" aria-label="Accent presets">
+        <button class="swatch" type="button" data-color="#111111" style="background:#111111" aria-label="Black"></button>
+        <button class="swatch" type="button" data-color="#c8102e" style="background:#c8102e" aria-label="Red"></button>
+        <button class="swatch" type="button" data-color="#e8590c" style="background:#e8590c" aria-label="Orange"></button>
+        <button class="swatch" type="button" data-color="#d4af37" style="background:#d4af37" aria-label="Gold"></button>
+        <button class="swatch" type="button" data-color="#1a7f37" style="background:#1a7f37" aria-label="Green"></button>
+        <button class="swatch" type="button" data-color="#0f766e" style="background:#0f766e" aria-label="Teal"></button>
+        <button class="swatch" type="button" data-color="#0b57d0" style="background:#0b57d0" aria-label="Blue"></button>
+        <button class="swatch" type="button" data-color="#7c3aed" style="background:#7c3aed" aria-label="Purple"></button>
+      </div>
+      <div id="accent-wheel" class="wheel-pop" hidden>
+        <canvas id="s-wheel" width="200" height="200" aria-hidden="true"></canvas>
+        <input id="s-wheel-v" type="range" min="0" max="100" value="100" aria-label="Brightness">
+      </div>
       <div class="btnrow">
         <button id="btn-new" type="button">New</button>
         <button id="btn-dup" type="button">Duplicate</button>
@@ -129,10 +150,6 @@
         </label>
         <label class="field"><span>Text size</span><input id="s-fontScale" type="number" step="0.05" min="0.6" max="2"></label>
       </div>
-      <div class="accentrow">
-        <label class="field"><span>Accent</span><input id="s-accent" type="color" value="#c8102e"></label>
-        <button id="s-accent-reset" class="ghost small" type="button">Theme defaults</button>
-      </div>
     </section>
 
   </aside>
@@ -179,6 +196,6 @@
 </main>
 
 <div id="status" class="status no-print" role="status"></div>
-<script type="module" src="app.js?v=26.11.14"></script>
+<script type="module" src="app.js?v=26.11.17"></script>
 </body>
 </html>

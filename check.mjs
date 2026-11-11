@@ -8,6 +8,9 @@ import {
   cleanImport,
   toneFor,
   code39Bars,
+  normalizeHex,
+  hsvToHex,
+  hexToHsv,
 } from './lib.js';
 
 const settings = (over) => ({ ...DEFAULT_SETTINGS, ...over });
@@ -152,5 +155,37 @@ assert.equal(toneFor({ bgsTone: '', gradeValue: '' }), 'silver');
 assert.deepEqual(code39Bars(''), []);
 assert.ok(code39Bars('PSA 123').length > 0);
 assert.ok(code39Bars('abc-123').length > 0);
+
+// Accent: hex normalisation and HSV round trip
+assert.equal(normalizeHex('#ABC'), '#aabbcc', 'short hex expanded');
+assert.equal(normalizeHex('c8102e'), '#c8102e', 'hash optional');
+assert.equal(normalizeHex('  #C8102E '), '#c8102e', 'trimmed, lowercased');
+assert.equal(normalizeHex('javascript:alert(1)'), '', 'non-hex rejected');
+assert.equal(normalizeHex('#gggggg'), '', 'bad digits rejected');
+assert.equal(hsvToHex(0, 1, 1), '#ff0000');
+assert.equal(hsvToHex(240, 1, 1), '#0000ff');
+assert.equal(hsvToHex(-60, 1, 1), '#ff00ff', 'negative hue wraps');
+const back = hexToHsv('#0b57d0');
+assert.equal(hsvToHex(back.h, back.s, back.v), '#0b57d0', 'hex -> hsv -> hex');
+assert.equal(hexToHsv('#fff').v, 1);
+assert.equal(hexToHsv('nope').v, 0, 'invalid hex reads as black');
+
+// Import: per-label accent validated, legacy accent settings migrated
+assert.equal(cleanImport({ labels: [{ accent: '#ABC' }] }).labels[0].accent, '#aabbcc');
+assert.equal(cleanImport({ labels: [{ accent: 'javascript:alert(1)' }] }).labels[0].accent, '');
+assert.equal(cleanImport({ labels: [{ accent: '#gggggg' }] }).labels[0].accent, '');
+assert.equal(cleanImport({ labels: [{}] }).labels[0].accent, '', 'accent defaults empty');
+assert.ok(!('accent' in DEFAULT_SETTINGS) && !('accents' in DEFAULT_SETTINGS), 'accent is per label');
+const legacy = cleanImport({
+  settings: { theme: 'psa', accent: '#123456' },
+  labels: [{ name: 'x' }, { name: 'y', accent: '#abc' }],
+});
+assert.equal(legacy.labels[0].accent, '#123456', 'old global accent seeds labels');
+assert.equal(legacy.labels[1].accent, '#aabbcc', 'explicit label accent wins');
+const perTheme = cleanImport({
+  settings: { theme: 'cgc', accents: { cgc: '#7c3aed' } },
+  labels: [{}],
+});
+assert.equal(perTheme.labels[0].accent, '#7c3aed', 'per-theme accent migrated');
 
 console.log('check.mjs: all assertions passed');

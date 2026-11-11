@@ -308,12 +308,75 @@ button.small { padding: 4px 8px; font-size: 12px; }
 
 .accentrow {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
-  gap: 10px;
+  gap: 8px;
   margin-top: 8px;
 }
-.accentrow .field { flex: 0 0 82px; }
-.accentrow input[type="color"] { height: 30px; padding: 2px; }
+.accentrow .field { flex: 1 1 100%; min-width: 0; }
+.accentrow button { flex: 1 1 0; white-space: nowrap; }
+#s-accent { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; text-transform: lowercase; }
+
+.swatches { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.swatch {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+}
+.swatch:hover { border-color: var(--accent); }
+
+.wheel-pop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.wheel-pop canvas {
+  display: block;
+  flex: 0 0 120px;
+  width: 120px;
+  height: 120px;
+  cursor: crosshair;
+  touch-action: none;
+}
+/* Brightness bar: track is the black -> current-colour gradient, set inline. */
+.wheel-pop input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 120px;
+  margin: 0;
+  border-radius: 9px;
+  background: linear-gradient(to top, #000, #888);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+.wheel-pop input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 10px;
+  border-radius: 4px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+.wheel-pop input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 10px;
+  border-radius: 4px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+}
 
 .hint { margin: 10px 0 0; font-size: 11px; color: var(--muted); }
 
